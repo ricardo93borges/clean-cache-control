@@ -1,11 +1,27 @@
 import { CacheStore } from '../protocols/cache'
 import { SavePurchases } from '@/domain/usecases'
 
+const maxAgeInDays = 3
+
+export const getCacheExpirationDate = (timestamp: Date): Date => {
+  const maxCacheAge = new Date(timestamp)
+  maxCacheAge.setDate(maxCacheAge.getDate() - maxAgeInDays)
+  return maxCacheAge
+}
+
 export class CacheStoreSpy implements CacheStore {
   actions: CacheStoreSpy.Action[] = []
   deleteKey: string
   insertKey: string
+  fetchKey: string
   insertValues: SavePurchases.Params[] = []
+  fetchResult: any
+
+  fetch(key: string): any {
+    this.actions.push(CacheStoreSpy.Action.fetch)
+    this.fetchKey = key
+    return this.fetchResult
+  }
 
   delete(key: string): void {
     this.actions.push(CacheStoreSpy.Action.delete)
@@ -38,11 +54,20 @@ export class CacheStoreSpy implements CacheStore {
         throw new Error()
       })
   }
+
+  simulateFetchError(): void {
+    jest.spyOn(CacheStoreSpy.prototype, 'fetch')
+      .mockImplementationOnce(() => {
+        this.actions.push(CacheStoreSpy.Action.fetch)
+        throw new Error()
+      })
+  }
 }
 
 export namespace CacheStoreSpy {
   export enum Action {
     delete,
-    insert
+    insert,
+    fetch,
   }
 }
